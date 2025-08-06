@@ -1,128 +1,202 @@
 <!DOCTYPE html>
 <html lang="ja">
+
 <head>
-  <meta charset="utf-8"/>
-  <title>Positron ベース + 郵便局レッドのパルスアニメーション</title>
-  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no"/>
-  <!-- MapLibre GL JS CSS -->
-  <link
-    href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css"
-    rel="stylesheet"
-  />
-  <style>
-    html, body { margin:0; padding:0; height:100%; }
-    #map { width:100%; height:100%; }
-  </style>
+    <meta charset="utf-8" />
+    <title>Positron ベース + 郵便局レッドのパルスアニメーション</title>
+    <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <!-- MapLibre GL JS CSS -->
+    <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
+    <style>
+        html,
+        body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+        }
+    </style>
 </head>
+
 <body>
-  <div id="map"></div>
-  <!-- MapLibre GL JS -->
-  <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
-  <script>
-    // fetch postal_codes.json
-    async function fetchPostalCodes() {
-      const response = await fetch('./postal_codes.json');
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      return await response.json();
-    }
-
-    // 1. MapLibre 初期化：Carto Positron スタイルを指定
-    const map = new maplibregl.Map({
-      container: 'map',
-      style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
-      center: [141.338345, 43.073342],
-      zoom: 12
-    });
-
-    map.on('load', async () => {
-      // 2. ルート用 GeoJSON ソース登録（lineMetrics: true）
-      map.addSource('route', {
-        type: 'geojson',
-        lineMetrics: true,
-        data: {
-          type: 'Feature',
-          geometry: {
-            type: 'LineString',
-            coordinates: await fetchPostalCodes()
-          }
-        }
-      });
-
-      // 3. ベースライン（郵便局レッド）
-      map.addLayer({
-        id: 'route-base',      
-        type: 'line',          
-        source: 'route',       
-        layout: { 'line-cap':'round','line-join':'round' },
-        paint: {
-          'line-color': '#ED1C24',  // JP Post Red
-          'line-width': 5
-        }
-      });
-
-
-
-    // add a line layer with line-dasharray set to the first value in dashArraySequence
-        map.addLayer({
-            type: 'line',
-            source: 'route',
-            id: 'line-dashed',
-            paint: {
-                'line-color': '#ed878b',
-                'line-width': 5,
-                'line-dasharray': [0, 4, 3],
+    <div id="map"></div>
+    <!-- MapLibre GL JS -->
+    <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+    <script>
+        // fetch postal_codes.json
+        async function fetchPostalCodes(){
+            const response = await fetch('./postal_codes.json');
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
             }
+            return await response.json();
+        }
+
+        // 1. MapLibre 初期化：Carto Positron スタイルを指定
+        const map = new maplibregl.Map({
+            container: 'map',
+            style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+            center: [141.338345, 43.073342],
+            zoom: 12
         });
 
-        // technique based on https://jsfiddle.net/2mws8y3q/
-        // an array of valid line-dasharray values, specifying the lengths of the alternating dashes and gaps that form the dash pattern
-        const dashArraySequence = [
-            [0, 4, 3],
-            [0.5, 4, 2.5],
-            [1, 4, 2],
-            [1.5, 4, 1.5],
-            [2, 4, 1],
-            [2.5, 4, 0.5],
-            [3, 4, 0],
-            [0, 0.5, 3, 3.5],
-            [0, 1, 3, 3],
-            [0, 1.5, 3, 2.5],
-            [0, 2, 3, 2],
-            [0, 2.5, 3, 1.5],
-            [0, 3, 3, 1],
-            [0, 3.5, 3, 0.5]
-        ];
+        map.on('load', async () => {
+            // 2. ルート用 GeoJSON ソース登録（lineMetrics: true）
+            const codes = await fetchPostalCodes();
+            map.addSource('route', {
+                type: 'geojson',
+                lineMetrics: true,
+                data: {
+                    type: 'Feature',
+                    geometry: {
+                        type: 'LineString',
+                        coordinates: codes,
+                    }
+                }
+            });
 
-        let step = 0;
+            const zoomPos = 7;
+            // 3. ベースライン（郵便局レッド）
+            map.addLayer({
+                id: 'route-base',
+                type: 'line',
+                source: 'route',
+                minzoom: zoomPos,
+                layout: { 'line-cap': 'round', 'line-join': 'round' },
+                paint: {
+                    'line-color': '#ED1C24',  // JP Post Red
+                    'line-width': 5
+                }
+            });
 
-        function animateDashArray(timestamp) {
-            // Update line-dasharray using the next value in dashArraySequence. The
-            // divisor in the expression `timestamp / 50` controls the animation speed.
-            const newStep = parseInt(
-                (timestamp /   100) % dashArraySequence.length
-            );
 
-            if (newStep !== step) {
-                map.setPaintProperty(
-                    'line-dashed',
-                    'line-dasharray',
-                    dashArraySequence[step]
-                );
-                step = newStep;
+            map.addSource('major-segments', {
+                type: 'geojson',
+                lineMetrics: true,
+                data: await fetch("./major_segments.json").then(response => response.json())
+            });
+
+            // 3. ベースライン（郵便局レッド）
+            map.addLayer({
+                id: 'major-lines',
+                type: 'line',
+                source: 'major-segments',
+                maxzoom: zoomPos,
+                paint: {
+                    'line-color': '#ed1c24',  // JP Post Red
+                    'line-width': 8,
+                }
+            });
+
+
+            map.addSource('postal-codes', {
+                type: 'geojson',
+                data: {
+                    type: 'FeatureCollection',
+                    features: codes.map((code) => {
+                        return {
+                            type: 'Feature',
+                            geometry: {
+                                type: 'Point',
+                                coordinates: code
+                            },
+                            properties: { label: code[2] }
+                        }
+                    })
+                }
+            });
+
+            map.addLayer({
+                id: 'marker-labels',
+                type: 'symbol',
+                source: 'postal-codes',
+                layout: {
+                    'text-field': ['get', 'label'],    // properties.label を表示
+                    'text-font': ['Open Sans Regular', 'Arial Unicode MS Regular'],
+                    'text-size': 12,                   // 必要に応じて調整
+                    'text-offset': [0, 0],             // 中央揃え
+                    'text-anchor': 'center',
+                },
+                paint: {
+                    'text-color': '#000000',
+                    'text-halo-color': '#ffffff',
+                    'text-halo-width': 1,
+                }
+            });
+
+            const showAnimation = false;
+            if (!showAnimation) {
+                // If animation is not needed, return early
+                return;
             }
 
-            // Request the next frame of the animation.
-            requestAnimationFrame(animateDashArray);
-        }
+            // 4. アニメーション用のラインレイヤーを追加
+            // This layer will be animated with a line-dasharray pattern
 
-        // start the animation
-        animateDashArray(0);
+            // add a line layer with line-dasharray set to the first value in dashArraySequence
+            map.addLayer({
+                type: 'line',
+                source: 'route',
+                id: 'line-dashed',
+                paint: {
+                    'line-color': '#ed878b',
+                    'line-width': 5,
+                    'line-dasharray': [0, 4, 3],
+                }
+            });
+
+            // technique based on https://jsfiddle.net/2mws8y3q/
+            // an array of valid line-dasharray values, specifying the lengths of the alternating dashes and gaps that form the dash pattern
+            const dashArraySequence = [
+                [0, 4, 3],
+                [0.5, 4, 2.5],
+                [1, 4, 2],
+                [1.5, 4, 1.5],
+                [2, 4, 1],
+                [2.5, 4, 0.5],
+                [3, 4, 0],
+                [0, 0.5, 3, 3.5],
+                [0, 1, 3, 3],
+                [0, 1.5, 3, 2.5],
+                [0, 2, 3, 2],
+                [0, 2.5, 3, 1.5],
+                [0, 3, 3, 1],
+                [0, 3.5, 3, 0.5]
+            ];
+
+            let step = 0;
+
+            function animateDashArray(timestamp) {
+                // Update line-dasharray using the next value in dashArraySequence. The
+                // divisor in the expression `timestamp / 50` controls the animation speed.
+                const newStep = parseInt(
+                    (timestamp / 100) % dashArraySequence.length
+                );
+
+                if (newStep !== step) {
+                    map.setPaintProperty(
+                        'line-dashed',
+                        'line-dasharray',
+                        dashArraySequence[step]
+                    );
+                    step = newStep;
+                }
+
+                // Request the next frame of the animation.
+                requestAnimationFrame(animateDashArray);
+            }
+
+            // start the animation
+            animateDashArray(0);
 
 
 
-    });
-  </script>
+        });
+    </script>
 </body>
+
 </html>
