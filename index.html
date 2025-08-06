@@ -141,7 +141,7 @@
                                 type: 'Point',
                                 coordinates: code
                             },
-                            properties: { label: code[2] }
+                            properties: { label: postal.slice(0, 3) + '-' + postal.slice(3) }
                         }
                     })
                 }
