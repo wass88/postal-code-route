@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8"/>
+  <title>Positron ベース + 郵便局レッドのパルスアニメーション</title>
+  <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no"/>
+  <!-- MapLibre GL JS CSS -->
+  <link
+    href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css"
+    rel="stylesheet"
+  />
+  <style>
+    html, body { margin:0; padding:0; height:100%; }
+    #map { width:100%; height:100%; }
+  </style>
+</head>
+<body>
+  <div id="map"></div>
+  <!-- MapLibre GL JS -->
+  <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
+  <script>
+    // fetch postal_codes.json
+    async function fetchPostalCodes() {
+      const response = await fetch('./postal_codes.json');
+      if (!response.ok) {
+        throw new Error('Network response was not ok');
+      }
+      return await response.json();
+    }
+
+    // 1. MapLibre 初期化：Carto Positron スタイルを指定
+    const map = new maplibregl.Map({
+      container: 'map',
+      style: 'https://basemaps.cartocdn.com/gl/positron-gl-style/style.json',
+      center: [141.338345, 43.073342],
+      zoom: 12
+    });
+
+    map.on('load', async () => {
+      // 2. ルート用 GeoJSON ソース登録（lineMetrics: true）
+      map.addSource('route', {
+        type: 'geojson',
+        lineMetrics: true,
+        data: {
+          type: 'Feature',
+          geometry: {
+            type: 'LineString',
+            coordinates: await fetchPostalCodes()
+          }
+        }
+      });
+
+      // 3. ベースライン（郵便局レッド）
+      map.addLayer({
+        id: 'route-base',      
+        type: 'line',          
+        source: 'route',       
+        layout: { 'line-cap':'round','line-join':'round' },
+        paint: {
+          'line-color': '#ED1C24',  // JP Post Red
+          'line-width': 5
+        }
+      });
+
+  map.addLayer({
+    id: 'route-pulse',
+    type: 'line',
+    source: 'route',
+    layout: { 'line-cap': 'round', 'line-join': 'round' },
+    paint: {
+      'line-width': 6,  // 必要であれば微調整
+      'line-gradient': [
+        'interpolate', ['linear'], ['line-progress'],
+        0.0, 'rgba(255,255,255,0)',
+        0.5, 'rgba(255,255,255,0.2)',  // 最大でも α=0.2 に
+        1.0, 'rgba(255,255,255,0)'
+      ]
+    }
+  });
+
+  // 5. アニメーションループ（同様に α 値を調整）
+  let offset = 0;
+  (function animate() {
+    offset = (offset + 0.005) % 1;
+    map.setPaintProperty(
+      'route-pulse', 'line-gradient',
+      ['interpolate', ['linear'],
+        ['%', ['+', ['line-progress'], offset], 1],
+        0.0, 'rgba(255,255,255,0)',
+        0.5, 'rgba(255,255,255,0.2)',
+        1.0, 'rgba(255,255,255,0)'
+      ]
+    );
+    requestAnimationFrame(animate);
+  })();
+    });
+  </script>
+</body>
+</html>
