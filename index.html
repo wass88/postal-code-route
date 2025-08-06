@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="utf-8" />
-    <title>Positron ベース + 郵便局レッドのパルスアニメーション</title>
+    <title>郵便番号順に地図上に線を引く</title>
     <meta name="viewport" content="initial-scale=1,maximum-scale=1,user-scalable=no" />
     <!-- MapLibre GL JS CSS -->
     <link href="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.css" rel="stylesheet" />
@@ -19,16 +19,36 @@
             width: 100%;
             height: 100%;
         }
+
+        #map-credit {
+            position: absolute;
+            bottom: 8px;
+            /* 下から 8px */
+            left: 8px;
+            /* 右から 8px */
+            font-size: 10px;
+            /* 小さめの文字 */
+            color: rgba(0, 0, 0, 0.5);
+            /* 半透明の黒 */
+            background: rgba(255, 255, 255, 0.6);
+            /* 軽い白背景で可読性向上 */
+            padding: 2px 4px;
+            border-radius: 4px;
+            /* マップ操作を邪魔しない */
+            z-index: 1;
+            /* マップより前面 */
+        }
     </style>
 </head>
 
 <body>
     <div id="map"></div>
+    <div id="map-credit"><a href="https://omocoro.jp/kiji/526546/">Idea</a><br><a href="https://wass80.xyz">wass80.xyz</a></div>
     <!-- MapLibre GL JS -->
     <script src="https://unpkg.com/maplibre-gl@2.4.0/dist/maplibre-gl.js"></script>
     <script>
         // fetch postal_codes.json
-        async function fetchPostalCodes(){
+        async function fetchPostalCodes() {
             const response = await fetch('./postal_codes.json');
             if (!response.ok) {
                 throw new Error('Network response was not ok');
